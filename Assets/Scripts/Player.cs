@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Player : MonoBehaviour {
+public class Player : MonoBehaviour, IKitchenObjectParent {
 
     private static Player instance;
     public static Player Instance {
@@ -22,15 +22,18 @@ public class Player : MonoBehaviour {
     [SerializeField] private float moveSpeed = 7f;
     [SerializeField] private GameInput gameInput;
     [SerializeField] private LayerMask countersLayerMask;
+    [SerializeField] private Transform kitchenObjectHoldPoint;
 
     private bool isWalking;
     private Vector3 lastInteractDir;
     private ClearCounter selectedCounter;
+    private KitchenObject kitchenObject;
 
     private void Awake() {
         if (Instance != null) {
             Debug.LogError("More than one player");
-        } else {
+        }
+        else {
             Instance = this;
         }
     }
@@ -41,7 +44,7 @@ public class Player : MonoBehaviour {
 
     private void GameInput_OnInteractionAction(object sender, System.EventArgs e) {
         if (selectedCounter != null) {
-            selectedCounter.Interact();
+            selectedCounter.Interact(this);
         }
     }
 
@@ -95,7 +98,8 @@ public class Player : MonoBehaviour {
             canMove = !Physics.CapsuleCast(transform.position, transform.position + Vector3.up * playerHeight, playerRadius, moveDirX, moveDistance);
             if (canMove) {
                 moveDir = moveDirX;
-            } else {
+            }
+            else {
                 Vector3 moveDirZ = new Vector3(0, 0, moveDir.z).normalized;
                 canMove = !Physics.CapsuleCast(transform.position, transform.position + Vector3.up * playerHeight, playerRadius, moveDirZ, moveDistance);
                 if (canMove) {
@@ -119,5 +123,25 @@ public class Player : MonoBehaviour {
         OnSelectedCounterChange?.Invoke(this, new OnSelectedCounterChangeEventArgs {
             selectedCouneter = selectedCounter
         });
+    }
+
+    public Transform GetKitchenObjectFollowTransform() {
+        return kitchenObjectHoldPoint;
+    }
+
+    public void SetKitchenObject(KitchenObject kitchenObject) {
+        this.kitchenObject = kitchenObject;
+    }
+
+    public KitchenObject GetKitchenObject() {
+        return kitchenObject;
+    }
+
+    public void ClearKitchenObject() {
+        kitchenObject = null;
+    }
+
+    public bool HasKitchenObject() {
+        return kitchenObject != null;
     }
 }
