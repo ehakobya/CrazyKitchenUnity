@@ -1,8 +1,23 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class Player : MonoBehaviour {
+
+    private static Player instance;
+    public static Player Instance {
+        get {
+            return instance;
+        }
+        private set {
+            instance = value;
+        }
+    }
+    public event EventHandler<OnSelectedCounterChangeEventArgs> OnSelectedCounterChange;
+    public class OnSelectedCounterChangeEventArgs : EventArgs {
+        public ClearCounter selectedCouneter;
+    }
 
     [SerializeField] private float moveSpeed = 7f;
     [SerializeField] private GameInput gameInput;
@@ -10,24 +25,23 @@ public class Player : MonoBehaviour {
 
     private bool isWalking;
     private Vector3 lastInteractDir;
+    private ClearCounter selectedCounter;
+
+    private void Awake() {
+        if (Instance != null) {
+            Debug.LogError("More than one player");
+        } else {
+            Instance = this;
+        }
+    }
 
     private void Start() {
         gameInput.OnInteractAction += GameInput_OnInteractionAction;
     }
 
     private void GameInput_OnInteractionAction(object sender, System.EventArgs e) {
-        Vector2 inputVector = gameInput.GetMovementVectorNormalized();
-        Vector3 moveDir = new Vector3(inputVector.x, 0f, inputVector.y);
-
-        if (moveDir != Vector3.zero) {
-            lastInteractDir = moveDir;
-        }
-
-        float interactDistance = 2f;
-        if (Physics.Raycast(transform.position, lastInteractDir, out RaycastHit raycastHit, interactDistance, countersLayerMask)) {
-            if (raycastHit.transform.TryGetComponent(out ClearCounter clearCounter)) {
-                clearCounter.Interact();
-            };
+        if (selectedCounter != null) {
+            selectedCounter.Interact();
         }
     }
 
@@ -51,8 +65,18 @@ public class Player : MonoBehaviour {
         float interactDistance = 2f;
         if (Physics.Raycast(transform.position, lastInteractDir, out RaycastHit raycastHit, interactDistance, countersLayerMask)) {
             if (raycastHit.transform.TryGetComponent(out ClearCounter clearCounter)) {
-                // clearCounter.Interact();
-            };
+                if (clearCounter != selectedCounter) {
+                    SetSelectedCounter(clearCounter);
+                }
+            }
+            // if there is something but it is not a counter
+            else {
+                SetSelectedCounter(null);
+            }
+        }
+        // if raycast doesnt hit anything then reset the selectedCounter
+        else {
+            SetSelectedCounter(null);
         }
     }
 
@@ -90,4 +114,10 @@ public class Player : MonoBehaviour {
 
     }
 
+    private void SetSelectedCounter(ClearCounter selectedCounter) {
+        this.selectedCounter = selectedCounter;
+        OnSelectedCounterChange?.Invoke(this, new OnSelectedCounterChangeEventArgs {
+            selectedCouneter = selectedCounter
+        });
+    }
 }
